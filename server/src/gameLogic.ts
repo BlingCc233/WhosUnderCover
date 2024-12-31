@@ -14,16 +14,18 @@ export const fetchWords = async (): Promise<{ word1: string; word2: string }> =>
  * @param users 当前房间用户列表
  * @param words 词语对
  */
-export const assignRolesAndWords = (users: User[], words: { word1: string; word2: string }) => {
+export const assignRolesAndWords = (users: User[], words: { word1: string; word2: string },isOpenBlank: boolean) => {
     const totalPlayers = users.length;
     let normalCount = 0, undercoverCount = 0, blankCount = 0;
 
+    // 判断白板是否开启
+    blankCount = !isOpenBlank ? 1 : 0;
     // 确定身份比例
     if (totalPlayers === 3) [normalCount, undercoverCount] = [2, 1];
-    else if (totalPlayers === 4) [normalCount, undercoverCount, blankCount] = [2, 1, 1];
-    else if (totalPlayers === 5) [normalCount, undercoverCount, blankCount] = [3, 1, 1];
-    else if (totalPlayers === 6) [normalCount, undercoverCount, blankCount] = [4, 1, 1];
-    else if (totalPlayers === 7) [normalCount, undercoverCount, blankCount] = [4, 2, 1];
+    else if (totalPlayers === 4) [normalCount, undercoverCount] = [2 + blankCount, 1];
+    else if (totalPlayers === 5) [normalCount, undercoverCount] = [3 + blankCount, 1];
+    else if (totalPlayers === 6) [normalCount, undercoverCount] = [4 + blankCount, 1];
+    else if (totalPlayers === 7) [normalCount, undercoverCount] = [4 + blankCount, 2];
     else throw new Error("玩家数量不符合规则");
 
     // 随机打乱用户数组

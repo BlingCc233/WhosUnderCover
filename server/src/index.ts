@@ -20,6 +20,15 @@ interface ClientMessage {
     candidateUser?: User[];
 }
 
+// 定义聊天消息的接口
+interface ChatMessage {
+    roomId: string;
+    id: string;
+    userId: string;
+    userName: string;
+    content: string;
+}
+
 const userSocketMap: Map<string, string> = new Map();
 
 io.on("connection", (socket: Socket) => {
@@ -45,14 +54,16 @@ io.on("connection", (socket: Socket) => {
         }, 2 * 60 * 60 * 1000);
     });
 
-    socket.on("start_game", async (data: { roomId: string }) => {
-        const {roomId} = data;
+
+
+    socket.on("start_game", async (data: { roomId: string, isOpenBlank: boolean}) => {
+        const {roomId,isOpenBlank} = data;
         const room = rooms.get(roomId);
 
         if (room && room.users.length >= 3) {
             try {
                 const words = await fetchWords();
-                const updatedUsers = assignRolesAndWords(room.users, words);
+                const updatedUsers = assignRolesAndWords(room.users, words, isOpenBlank);
                 room.users = updatedUsers;
 
                 rooms.set(roomId, room);
@@ -238,6 +249,40 @@ io.on("connection", (socket: Socket) => {
         }
         io.to(roomId).emit("vote_ended", {roomId, deadUser: maxVoteUser, aliveUser, message});
     });
+
+    // 处理聊天消息
+    socket.on("chat_message", (data: {
+        roomId: string,
+        userId: string,
+        content: string
+    }) => {
+        const { roomId, userId, content } = data;
+        const room = rooms.get(roomId);
+
+        if (!room) {
+            socket.emit("error", { message: "房间不存在" });
+            return;
+        }
+
+        const user = room.users.find(u => u.id === userId);
+
+        if (!user) {
+            socket.emit("error", { message: "用户不存在" });
+            return;
+        }
+
+        // 创建聊天消息对象
+        const chatMessage: ChatMessage = {
+            roomId: roomId,
+            id: uuidv4(),
+            userId: userId,
+            userName: user.nickname,
+            content: content
+        };
+
+        io.to(roomId).emit("chat_message_success", chatMessage);
+    });
+
 
     socket.on("disconnect", () => {
         // Remove the mapping when the socket disconnects
