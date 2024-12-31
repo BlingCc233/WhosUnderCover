@@ -49,6 +49,7 @@
         <h3>游戏结束</h3>
         <div class="vote-result">
           <p>恭喜{{ winner }}取得胜利！！</p>
+          <p>卧底词语为：{{ wordOfUndercover }}</p>
         </div>
 
         <div class="vote-button">
@@ -117,7 +118,15 @@ const props = defineProps({
 
 const emit = defineEmits(['voteTo', 'closeVoteDialog']);
 const voteSele = ref("");
-
+const wordOfUndercover = ref("");
+onMounted(() => {
+  for (let i = 0; i < props.users.length; i++) {
+    if (props.users[i].role === "卧底") {
+      wordOfUndercover.value = props.users[i].word;
+      break;
+    }
+  }
+});
 function voteTo() {
   if (voteSele.value === "") {
     MessagePlugin.warning("请选择投票对象");
@@ -135,6 +144,9 @@ function closeVoteDialog() {
 </script>
 
 <style scoped>
+:root {
+  --primary-color: #4473a6;
+}
 .dialog-overlay {
   position: fixed;
   top: 0;
@@ -175,13 +187,13 @@ function closeVoteDialog() {
 }
 
 .dialog-content h3 {
-  color: #1890ff;
+  color: var(--primary-color);
   margin-bottom: 10px;
   font-size: 1.5em;
   font-weight: 500;
 }
 .dialog-content h4 {
-  color: rgba(24, 144, 255, 0.8);
+  color: var(--primary-color);
   margin-bottom: 10px;
   font-size: 1.2em;
   font-weight: 500;
@@ -204,7 +216,7 @@ function closeVoteDialog() {
 }
 
 .vote-list::-webkit-scrollbar-thumb {
-  background: #1890ff;
+  background: var(--primary-color);
   border-radius: 3px;
 }
 
@@ -226,28 +238,6 @@ function closeVoteDialog() {
   margin-bottom: 5px;
 }
 
-
-/* 自定义radio样式 */
-.el-radio {
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-  font-size: 14px;
-  color: #333;
-  padding: 8px 12px;
-  border-radius: 6px;
-  transition: all 0.3s;
-}
-
-.el-radio:hover {
-  background: #f0f7ff;
-}
-
-.el-radio.is-checked {
-  color: #1890ff;
-  background: #e6f7ff;
-}
-
 .vote-button {
   text-align: center;
   padding-top: 10px;
@@ -255,7 +245,7 @@ function closeVoteDialog() {
 }
 
 .vote-button button {
-  background: #1890ff;
+  background: var(--primary-color);
   color: white;
   border: none;
   padding: 10px 30px;

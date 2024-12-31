@@ -33,6 +33,9 @@ function submitNickname(){
 </script>
 
 <style scoped>
+:root {
+  --primary-color: #4473a6;
+}
 .dialog-overlay {
   position: fixed;
   top: 0;
@@ -73,7 +76,7 @@ function submitNickname(){
 }
 
 .dialog-content h3 {
-  color: #1890ff;
+  color: var(--primary-color);
   margin-bottom: 15px;
   font-size: 1.5em;
   font-weight: 500;
@@ -97,7 +100,7 @@ function submitNickname(){
 
 .dialog-content input[type="text"]:focus {
   outline: none;
-  border-color: #1890ff;
+  border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgba(24,144,255,0.1);
 }
 
@@ -106,7 +109,7 @@ function submitNickname(){
 }
 
 .dialog-content button {
-  background: #1890ff;
+  background: var(--primary-color);
   color: white;
   padding: 12px 25px;
   border: none;
