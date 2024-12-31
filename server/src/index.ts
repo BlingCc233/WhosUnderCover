@@ -20,6 +20,10 @@ interface ClientMessage {
     candidateUser?: User[];
 }
 
+// 每个房间聊天历史记录
+const chatHistory: Map<string, ChatMessage[]> = new Map();
+
+
 // 定义聊天消息的接口
 interface ChatMessage {
     roomId: string;
@@ -48,6 +52,7 @@ io.on("connection", (socket: Socket) => {
         const room: Room = {roomId, users: [], host: ""};
         rooms.set(roomId, room);
         socket.join(roomId);
+        chatHistory.set(roomId, []);
         socket.emit("room_created", {room});
         setTimeout(() => {
             rooms.delete(roomId);
@@ -55,9 +60,8 @@ io.on("connection", (socket: Socket) => {
     });
 
 
-
-    socket.on("start_game", async (data: { roomId: string, isOpenBlank: boolean}) => {
-        const {roomId,isOpenBlank} = data;
+    socket.on("start_game", async (data: { roomId: string, isOpenBlank: boolean }) => {
+        const {roomId, isOpenBlank} = data;
         const room = rooms.get(roomId);
 
         if (room && room.users.length >= 3) {
@@ -94,6 +98,7 @@ io.on("connection", (socket: Socket) => {
     socket.on("get_room_info", (data: { roomId: string, userId: string }) => {
         const {roomId, userId} = data;
         const room = rooms.get(roomId);
+        let chatRecords = chatHistory.get(roomId) || [];
 
         // 如果socket没有加入房间，则加入房间
         if (!socket.rooms.has(roomId)) {
@@ -102,11 +107,10 @@ io.on("connection", (socket: Socket) => {
         }
         // 曾经来过
         if (userId != undefined && userId != null && userId != "" && userId != "undefined") {
-          //Store the mapping of user.id to socket.id
+            //Store the mapping of user.id to socket.id
             userSocketMap.set(userId, socket.id);
-            io.to(roomId).emit("room_update", {room, roomId});
         }
-        socket.emit("room_info", {room});
+        socket.emit("room_info", {room, chatRecords});
     });
 
     socket.on("join_room", (data: { roomId: string, nickname?: string }) => {
@@ -257,18 +261,18 @@ io.on("connection", (socket: Socket) => {
         userId: string,
         content: string
     }) => {
-        const { roomId, userId, content } = data;
+        const {roomId, userId, content} = data;
         const room = rooms.get(roomId);
 
         if (!room) {
-            socket.emit("error", { message: "房间不存在" });
+            socket.emit("error", {message: "房间不存在"});
             return;
         }
 
         const user = room.users.find(u => u.id === userId);
 
         if (!user) {
-            socket.emit("error", { message: "用户不存在" });
+            socket.emit("error", {message: "用户不存在"});
             return;
         }
 
@@ -280,6 +284,14 @@ io.on("connection", (socket: Socket) => {
             userName: user.nickname,
             content: content
         };
+
+        let chatRecord: ChatMessage[] | undefined = [];
+        chatRecord = chatHistory.get(roomId);
+        if (chatRecord) {
+            chatRecord.push(chatMessage)
+            chatHistory.set(roomId, chatRecord);
+        }
+
 
         io.to(roomId).emit("chat_message_success", chatMessage);
     });

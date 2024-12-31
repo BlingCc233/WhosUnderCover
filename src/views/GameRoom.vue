@@ -1,166 +1,169 @@
 <template>
-    <nickname-dialog v-if="nicknameDialogVisible" @nickname-submitted="handleNicknameSubmitted"/>
-    <div class="room-container"
-         @touchstart="handleTouchStart"
-         @touchmove="handleTouchMove"
-         @touchend="handleTouchEnd">
-      <!-- 固定顶部栏 -->
-      <div class="top-bar">
-        <div>房间号：<span class="room-id">{{ roomId }}</span></div>
-      </div>
-
-
-      <!-- 玩家列表 -->
-      <div class="player-list" :key="randKey">
-        <div v-for="(user,index) in users" :key="user.id" :id="user.id"
-             :class="{userDead: user.isDead, self: user.id === userid&&!user.isDead, common: user.id!== userid&&!user.isDead}">
-
-          <el-avatar :id="'avatar'+user.id" :size="35" :class="{alive:!user.isDead , dead: user.isDead}">
-            {{ user.nickname.slice(0, 1) }}
-          </el-avatar>
-          <span v-if="user.id === hostId" class="host-label">(房主)</span>
-          <span class="order-label">{{index+1}}</span>
-
-          <span class="user-nickname">{{ user.nickname }}</span>
-        </div>
-      </div>
-
-      <!--游戏内容框-->
-      <div class="game-container">
-        <div class="game-title" v-if="!started">等待房主开始游戏</div>
-        <div class="game-info" v-if="started">
-          <div class="game-title" v-if="!isVotable">游戏进行中</div>
-          <div class="game-title" v-if="isVotable">投票进行中, 请等待其他玩家投票<b>({{ countdown }} 秒)</b></div>
-          <div class="game-word">{{ word }}</div>
-        </div>
-        <!-- 下滑提示器 -->
-        <div class="swipe-indicator" @click="showChat = !showChat">
-          <i class="arrow-down"></i>
-          <span>下滑查看聊天</span>
-        </div>
-      </div>
-
-      <!-- 聊天框 -->
-      <div class="chat-container" :class="{ 'slide-up': showChat }">
-        <!-- 聊天消息列表 -->
-        <div class="chat-messages" ref="messageListRef">
-          <div v-for="msg in chatMessages" :key="msg.id" class="message-item">
-            <div class="message-avatar">
-              <el-avatar :size="30" class="alive">
-                {{ msg.userName.slice(0, 1) }}
-              </el-avatar>
-            </div>
-            <div class="message-content">
-              <div :class="{messageName:msg.userId!==userid,messageNameSelf: msg.userId===userid}">{{ msg.userName }}</div>
-              <div :class="{messageText:msg.userId!==userid,messageTextSelf: msg.userId===userid}">{{ msg.content }}</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- 输入框区域 -->
-        <div class="chat-input-area">
-          <div class="input-wrapper">
-            <input
-                v-model="messageText"
-                type="text"
-                placeholder="输入消息..."
-                class="chat-input"
-                :maxlength="100"
-                @keyup.enter="sendMessage"
-            >
-            <button class="chat-send-btn" @click="sendMessage">
-              发送
-            </button>
-          </div>
-        </div>
-      </div>
-
-
-      <!-- 投票选择框-->
-      <vote-dialog v-if="voteDialogVisible" :user-id="userid" :is-votable="isVotable" :dead-man="deadMan" :users="users"
-                   :alive-users="aliveUsers" :pre-to-dead-man="preToDeadMan"
-                   :is-get-vote-result="isGetVoteResult" :candidate-user="candidateUser" :oprate-user="oprateUser"
-                   :ended="ended" :winner="winner" :countdown="countdown"
-                   @vote-to="voteTo" @close-vote-dialog="closeVoteDialog"/>
-
-      <!-- 底部操作栏 -->
-      <div class="bottom-bar">
-        <button v-if="isHost&&started&&!isVotable" :key="randKey" class="start-vote-button"
-                @click="openVoteConfirmDialog">
-          开始投票
-        </button>
-        <button v-if="isHost&&!started" class="start-game-button" @click="openReStartConfirmDialog">
-          开始游戏
-        </button>
-        <button v-if="isHost&&started" class="start-game-button" @click="openReStartConfirmDialog">
-          重新开始
-        </button>
-        <button class="exit-room-button" @click="openExitConfirmDialog">
-          退出房间
-        </button>
-      </div>
-
-
-      <t-dialog
-          width="90%"
-          :closeBtn="false"
-          closeOnOverlayClick
-          destroyOnClose
-          header="确认开始本轮投票吗？"
-          placement="center"
-          v-model:visible="isShowVoteConfirmDialog"
-          dialog-class-name="confirm-dialog"
-      >
-        <template #footer>
-          <div style="display: flex;gap: 20px;justify-content: center">
-            <button @click="startVote">确认</button>
-            <button style="background-color: rgba(0,0,0,0.22)" @click="isShowVoteConfirmDialog = false">取消</button>
-          </div>
-        </template>
-      </t-dialog>
-      <t-dialog
-          width="90%"
-          :closeBtn="false"
-          closeOnOverlayClick
-          destroyOnClose
-          :header="(started?'确定重新开始游戏吗？':'确定开始游戏吗？')"
-          placement="center"
-          v-model:visible="isShowReStartConfirmDialog"
-          dialog-class-name="confirm-dialog"
-      >
-        <template #body>
-          <t-checkbox v-model="isOpenBlank">开启白板</t-checkbox>
-        </template>
-        <template #footer>
-          <div style="display: flex;gap: 20px;justify-content: center">
-            <button @click="startGame">确认</button>
-            <button style="background-color: rgba(0,0,0,0.22)" @click="isShowReStartConfirmDialog = false">取消</button>
-          </div>
-        </template>
-      </t-dialog>
-      <t-dialog
-          :closeBtn="false"
-          closeOnOverlayClick
-          destroyOnClose
-          attach="footer"
-          header="确认退出房间吗？"
-          placement="center"
-          v-model:visible="isShowExitConfirmDialog"
-          dialog-class-name="confirm-dialog"
-      >
-        <template #footer>
-          <div style="display: flex;gap: 20px;justify-content: center">
-            <button @click="exitRoom">确认</button>
-            <button style="background-color: rgba(0,0,0,0.22)" @click="isShowExitConfirmDialog = false">取消</button>
-          </div>
-        </template>
-      </t-dialog>
+  <nickname-dialog v-if="nicknameDialogVisible" @nickname-submitted="handleNicknameSubmitted"/>
+  <div class="room-container"
+       @touchstart="handleTouchStart"
+       @touchmove="handleTouchMove"
+       @touchend="handleTouchEnd">
+    <!-- 固定顶部栏 -->
+    <div class="top-bar">
+      <div>房间号：<span class="room-id">{{ roomId }}</span></div>
     </div>
+
+
+    <!-- 玩家列表 -->
+    <div class="player-list" :key="randKey">
+      <div v-for="(user,index) in users" :key="user.id" :id="user.id"
+           :class="{userDead: user.isDead, self: user.id === userid&&!user.isDead, common: user.id!== userid&&!user.isDead}">
+
+        <el-avatar :id="'avatar'+user.id" :size="35" :class="{alive:!user.isDead , dead: user.isDead}">
+          {{ user.nickname.slice(0, 1) }}
+        </el-avatar>
+        <span v-if="user.id === hostId" class="host-label">(房主)</span>
+        <span class="order-label">{{ index + 1 }}</span>
+
+        <span class="user-nickname">{{ user.nickname }}</span>
+      </div>
+    </div>
+
+    <!--游戏内容框-->
+    <div class="game-container">
+      <div class="game-title" v-if="!started">等待房主开始游戏</div>
+      <div class="game-info" v-if="started">
+        <div class="game-title" v-if="!isVotable">游戏进行中</div>
+        <div class="game-title" v-if="isVotable">投票进行中, 请等待其他玩家投票<b>({{ countdown }} 秒)</b></div>
+        <div class="game-word">{{ word }}</div>
+      </div>
+      <!-- 下滑提示器 -->
+      <div class="swipe-indicator" @click="showChat = !showChat">
+        <i class="arrow-down"></i>
+        <span>点击查看聊天</span>
+      </div>
+    </div>
+
+    <!-- 聊天框 -->
+    <div class="chat-container" :class="{ 'slide-up': showChat }">
+      <!-- 聊天消息列表 -->
+      <div class="chat-messages" ref="messageListRef">
+        <div v-for="msg in chatMessages" :key="msg.id" class="message-item">
+          <div class="message-avatar">
+            <el-avatar :size="30" class="alive">
+              {{ msg.userName.slice(0, 1) }}
+            </el-avatar>
+          </div>
+          <div class="message-content">
+            <div :class="{messageName:msg.userId!==userid,messageNameSelf: msg.userId===userid}">{{
+                msg.userName
+              }}
+            </div>
+            <div :class="{messageText:msg.userId!==userid,messageTextSelf: msg.userId===userid}">{{ msg.content }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 输入框区域 -->
+      <div class="chat-input-area">
+        <div class="input-wrapper">
+          <input
+              v-model="messageText"
+              type="text"
+              placeholder="输入消息..."
+              class="chat-input"
+              :maxlength="100"
+              @keyup.enter="sendMessage"
+          >
+          <button class="chat-send-btn" @click="sendMessage">
+            发送
+          </button>
+        </div>
+      </div>
+    </div>
+
+
+    <!-- 投票选择框-->
+    <vote-dialog v-if="voteDialogVisible" :user-id="userid" :is-votable="isVotable" :dead-man="deadMan" :users="users"
+                 :alive-users="aliveUsers" :pre-to-dead-man="preToDeadMan"
+                 :is-get-vote-result="isGetVoteResult" :candidate-user="candidateUser" :oprate-user="oprateUser"
+                 :ended="ended" :winner="winner" :countdown="countdown"
+                 @vote-to="voteTo" @close-vote-dialog="closeVoteDialog"/>
+
+    <!-- 底部操作栏 -->
+    <div class="bottom-bar">
+      <button v-if="isHost&&started&&!isVotable" :key="randKey" class="start-vote-button"
+              @click="openVoteConfirmDialog">
+        开始投票
+      </button>
+      <button v-if="isHost&&!started" class="start-game-button" @click="openReStartConfirmDialog">
+        开始游戏
+      </button>
+      <button v-if="isHost&&started" class="start-game-button" @click="openReStartConfirmDialog">
+        重新开始
+      </button>
+      <button class="exit-room-button" @click="openExitConfirmDialog">
+        退出房间
+      </button>
+    </div>
+
+
+    <t-dialog
+        width="90%"
+        :closeBtn="false"
+        closeOnOverlayClick
+        destroyOnClose
+        header="确认开始本轮投票吗？"
+        placement="center"
+        v-model:visible="isShowVoteConfirmDialog"
+        dialog-class-name="confirm-dialog"
+    >
+      <template #footer>
+        <div style="display: flex;gap: 20px;justify-content: center">
+          <button @click="startVote">确认</button>
+          <button style="background-color: rgba(0,0,0,0.22)" @click="isShowVoteConfirmDialog = false">取消</button>
+        </div>
+      </template>
+    </t-dialog>
+    <t-dialog
+        width="90%"
+        :closeBtn="false"
+        closeOnOverlayClick
+        destroyOnClose
+        :header="(started?'确定重新开始游戏吗？':'确定开始游戏吗？')"
+        placement="center"
+        v-model:visible="isShowReStartConfirmDialog"
+        dialog-class-name="confirm-dialog"
+    >
+      <template #body>
+        <t-checkbox v-model="isOpenBlank">开启白板</t-checkbox>
+      </template>
+      <template #footer>
+        <div style="display: flex;gap: 20px;justify-content: center">
+          <button @click="startGame">确认</button>
+          <button style="background-color: rgba(0,0,0,0.22)" @click="isShowReStartConfirmDialog = false">取消</button>
+        </div>
+      </template>
+    </t-dialog>
+    <t-dialog
+        :closeBtn="false"
+        closeOnOverlayClick
+        destroyOnClose
+        attach="footer"
+        header="确认退出房间吗？"
+        placement="center"
+        v-model:visible="isShowExitConfirmDialog"
+        dialog-class-name="confirm-dialog"
+    >
+      <template #footer>
+        <div style="display: flex;gap: 20px;justify-content: center">
+          <button @click="exitRoom">确认</button>
+          <button style="background-color: rgba(0,0,0,0.22)" @click="isShowExitConfirmDialog = false">取消</button>
+        </div>
+      </template>
+    </t-dialog>
+  </div>
 
 
 </template>
 <script setup>
-import {ref, onMounted, watch , nextTick} from "vue";
+import {ref, onMounted, watch, nextTick} from "vue";
 import {useRoute, useRouter} from "vue-router";
 import SocketIOClient from "../utils/socketio.js";
 import Cookies from 'js-cookie';
@@ -218,7 +221,7 @@ const oprateUser = ref([]);
 const candidateUser = ref([]);
 
 
-watch([users, randKey, nicknameDialogVisible, nickname, userid, hostId, isHost, isJoin, started, ended, winner, word, userNames, deadMan, aliveUsers, preToDeadMan, isGetVoteResult, isVotable, voteDialogVisible, oprateUser, candidateUser,chatMessages],
+watch([users, randKey, nicknameDialogVisible, nickname, userid, hostId, isHost, isJoin, started, ended, winner, word, userNames, deadMan, aliveUsers, preToDeadMan, isGetVoteResult, isVotable, voteDialogVisible, oprateUser, candidateUser, chatMessages],
     ([newUsers, newRandKey, newDialogVisible, newNickname, newUserid, newHostId, newIsHost, newIsJoin, newStarted, newEnded, newWinner, newWord, newUserNames, newDeadMan, newAliveUsers, newPreToDeadMan, newIsGetVoteResult, newIsVotable, newVoteDialogVisible, newOprateUser, newCandidateUser, newChatMessages]) => {
       Cookies.set('users', JSON.stringify(newUsers));
       Cookies.set('randKey', newRandKey);
@@ -336,6 +339,9 @@ onMounted(async () => {
           userNames.value.push(user.nickname);
         }
       }
+
+      chatMessages.value = message.chatRecords;
+
     }
 
     hostId.value = message.room.host;
@@ -568,9 +574,7 @@ function handleTouchStart(e) {
 
 function handleTouchMove(e) {
   const touchEndY = e.touches[0].clientY;
-  if (touchEndY - touchStartY.value > 160) {
-    showChat.value = true;
-  } else if (touchEndY - touchStartY.value < -160) {
+  if (touchEndY - touchStartY.value < -120) {
     showChat.value = false;
   }
 }
@@ -614,6 +618,7 @@ const isShowReStartConfirmDialog = ref(false);
 const isShowExitConfirmDialog = ref(false);
 // 是否加入白板
 const isOpenBlank = ref(false);
+
 function openVoteConfirmDialog() {
   isShowVoteConfirmDialog.value = true;
 }
@@ -729,7 +734,8 @@ function openExitConfirmDialog() {
   font-size: 12px;
   color: #ff1833;
 }
-.order-label{
+
+.order-label {
   position: absolute;
   bottom: 3px;
   right: 6px;
@@ -792,7 +798,8 @@ function openExitConfirmDialog() {
   color: #666;
   margin-bottom: 4px;
 }
-.messageNameSelf{
+
+.messageNameSelf {
   font-size: 14px;
   color: var(--primary-color);
   margin-bottom: 4px;
@@ -800,6 +807,7 @@ function openExitConfirmDialog() {
 
 .messageText {
   background: white;
+  color: #232323;
   padding: 8px 12px;
   border-radius: 8px;
   max-width: 100%;
@@ -809,6 +817,7 @@ function openExitConfirmDialog() {
 
 .messageTextSelf {
   border: 1px solid var(--primary-color);
+  color: #232323;
   background: white;
   padding: 8px 12px;
   border-radius: 8px;
@@ -841,7 +850,7 @@ function openExitConfirmDialog() {
   transition: border-color 0.2s;
 }
 
-.chat-send-btn{
+.chat-send-btn {
   flex: 1;
 }
 
