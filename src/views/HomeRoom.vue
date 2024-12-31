@@ -75,6 +75,9 @@ async function joinRoom() {
   }
 }
 </script><style>
+:root {
+  --primary-color: #4473a6;
+}
 .home-room {
   background: white;
   padding: 40px;
@@ -98,7 +101,7 @@ async function joinRoom() {
 }
 
 h1 {
-  color: #1890ff;
+  color: var(--primary-color);
   margin-bottom: 15px;
   font-size: 2.2em;
   font-weight: bold;
@@ -128,7 +131,7 @@ input {
 
 input:focus {
   outline: none;
-  border-color: #1890ff;
+  border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgba(24, 144, 255, 0.1);
 }
 
@@ -137,7 +140,7 @@ input::placeholder {
 }
 
 button {
-  background: #1890ff;
+  background: var(--primary-color);
   color: white;
   padding: 12px 25px;
   border: none;
