@@ -570,11 +570,15 @@ function exitRoom() {
 // 手势控制方法
 function handleTouchStart(e) {
   touchStartY.value = e.touches[0].clientY;
+  // 如果在上半区，直接return
+  if (touchStartY.value < window.innerHeight / 2) {
+    touchStartY.value = 0;
+  }
 }
 
 function handleTouchMove(e) {
   const touchEndY = e.touches[0].clientY;
-  if (touchEndY - touchStartY.value < -120) {
+  if (touchStartY.value - touchEndY > 120) {
     showChat.value = false;
   }
 }
