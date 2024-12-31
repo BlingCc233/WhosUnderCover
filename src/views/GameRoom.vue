@@ -34,7 +34,7 @@
           <div class="game-word">{{ word }}</div>
         </div>
         <!-- 下滑提示器 -->
-        <div class="swipe-indicator">
+        <div class="swipe-indicator" @click="showChat = !showChat">
           <i class="arrow-down"></i>
           <span>下滑查看聊天</span>
         </div>
@@ -568,9 +568,9 @@ function handleTouchStart(e) {
 
 function handleTouchMove(e) {
   const touchEndY = e.touches[0].clientY;
-  if (touchEndY - touchStartY.value > 120) {
+  if (touchEndY - touchStartY.value > 160) {
     showChat.value = true;
-  } else if (touchEndY - touchStartY.value < -120) {
+  } else if (touchEndY - touchStartY.value < -160) {
     showChat.value = false;
   }
 }
@@ -854,6 +854,7 @@ function openExitConfirmDialog() {
 }
 
 .swipe-indicator {
+  cursor: pointer;
   position: absolute;
   top: 50%;
   text-align: center;

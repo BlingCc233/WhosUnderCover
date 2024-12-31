@@ -104,6 +104,7 @@ io.on("connection", (socket: Socket) => {
         if (userId != undefined && userId != null && userId != "" && userId != "undefined") {
           //Store the mapping of user.id to socket.id
             userSocketMap.set(userId, socket.id);
+            io.to(roomId).emit("room_update", {room, roomId});
         }
         socket.emit("room_info", {room});
     });
